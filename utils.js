@@ -49,22 +49,28 @@ function weightToKg(value, unit) {
  * - akzeptiert "L×B×H", "LxBxH", "40X40X42", "30x20x10 mm", etc.
  * - Ergebnis in mm (falls Einheiten erkennbar), sonst roh.
  */
+// utils.js
 function parseDimensionsToLBH(text) {
-  if (!text) return { L:null, B:null, H:null };
+  if (!text) return { L: null, B: null, H: null };
   const raw = String(text).trim();
-  let s = raw.toLowerCase().replace(/[×x]/g, 'x').replace(',', '.').replace(/\s+/g, '');
 
-  // Einheit erkennen (mm, cm, m)
-  let scale = 1; // default mm
-  if (/(^|\D)cm\b/.test(s) || s.endsWith('cm')) scale = 10;
-  if (/(^|\D)m\b/.test(s) || s.endsWith('m')) scale = 1000;
+  // 1) Einheit in mm|cm|m erkennen, aber entfernen
+  let scale = 1;
+  let s = raw.toLowerCase()
+             .replace(/[,;]/g, '.')          // Komma oder Semikolon → Punkt
+             .replace(/\s+/g, '')            // Leerzeichen killen
+             .replace(/[×xX*/]/g, 'x');      // *, ×, X, / → x
 
-  const nums = (s.match(/-?\d+(?:\.\d+)?/g) || []).map(parseFloat);
-  const L = nums.length > 0 ? Math.round(nums[0] * scale) : null;
-  const B = nums.length > 1 ? Math.round(nums[1] * scale) : null;
-  const H = nums.length > 2 ? Math.round(nums[2] * scale) : null;
+  if (/cm\b/.test(s)) { scale = 10;  s = s.replace(/cm\b/g, ''); }
+  if (/(^|\D)m\b/.test(s)) { scale = 1000; s = s.replace(/m\b/g, ''); }
+
+  // 2) Bis zu 3 Zahlen extrahieren
+  const nums = (s.match(/-?\d+(\.\d+)?/g) || []).map(parseFloat);
+  const [L,B,H] = nums.map(n => n != null ? Math.round(n * scale) : null);
+
   return { L, B, H };
 }
+
 
 function normPartNo(s) {
   if (!s) return '';

@@ -3,110 +3,92 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DB Produktdaten Vergleichstool</title>
+  <title>Siemens Produktdaten – Vergleich</title>
+
+  <!-- XLSX‑Lib, falls du die bereits lokal bundelst, kannst du diesen CDN‑Import entfernen -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <style>
     :root {
+      /* DB‑Corporate‑Farben */
       --db-red: #c20015;
-      --db-red-dark: #8f0010;
       --grey-1: #f5f5f5;
       --grey-2: #e6e6e6;
       --grey-3: #bfbfbf;
-      --text: #222;
-      --green: #2e7d32;
-      --red: #c62828;
+      --text:   #222;
     }
     * { box-sizing: border-box; }
     body {
-      margin: 0;
+      margin:0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-      background: #fff;
+      background:#fff;
+      color:var(--text);
     }
     .wrap {
-      max-width: 920px;
-      margin: 40px auto;
-      padding: 0 16px;
-      text-align: center;
+      max-width:920px;
+      margin:40px auto;
+      padding:0 16px;
+      text-align:center;
     }
-    h1 { font-weight: 600; margin: 8px 0 24px; }
+    h1 { margin:0; font-weight:600; }
+    .divider {
+      width:120px; height:4px;
+      background:var(--db-red);
+      margin:8px auto 24px;
+      border-radius:2px;
+    }
+
+    /* ======= DROPZONE ======= */
     .dropzone {
-      border: 2px dashed var(--grey-3);
-      border-radius: 12px;
-      padding: 36px 24px;
-      background: var(--grey-1);
-      color: #555;
-      cursor: pointer;
-      transition: all .2s ease;
+      border:2px dashed var(--grey-3);
+      border-radius:12px;
+      padding:48px 24px;
+      background:var(--grey-1);
+      cursor:pointer;
+      transition:background .2s, border-color .2s;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      user-select:none;
     }
-    .dropzone:hover,
-    .dropzone.active {
-      border-color: var(--db-red);
-      background: #fff;
-      color: var(--db-red);
+    .dropzone.dragover {
+      border-color:var(--db-red);
+      background:#fff;
     }
-    .dropzone input { display: none; }
-    .hint {
-      margin-top: 8px;
-      color: #666;
-      font-size: 14px;
+    .dropzone strong{font-size:17px;}
+    .hint{ font-size:14px; color:#666; }
+
+    /* ======= BUTTONS ======= */
+    .actions{ margin-top:24px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    button{
+      min-width:160px; padding:12px 18px; font-size:16px; border-radius:8px;
+      border:1px solid var(--db-red); background:var(--db-red); color:#fff;
+      transition:.2s; cursor:pointer;
     }
-    .actions {
-      margin: 24px 0 0;
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    button {
-      border: 1px solid var(--db-red);
-      background: var(--db-red);
-      color: #fff;
-      padding: 12px 18px;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background .2s ease, border-color .2s ease, opacity .2s ease;
-      min-width: 160px;
-    }
-    button.secondary {
-      background: #fff;
-      color: var(--db-red);
-    }
-    button:disabled { opacity: .6; cursor: not-allowed; }
-    .status {
-      margin-top: 18px;
-      min-height: 24px;
-      font-size: 15px;
-      color: #444;
-    }
-    .progress {
-      width: 100%;
-      height: 8px;
-      background: var(--grey-2);
-      border-radius: 999px;
-      overflow: hidden;
-      margin-top: 10px;
-      display: none;
-    }
-    .progress > div {
-      height: 100%;
-      width: 0%;
-      background: var(--db-red);
-      transition: width .3s ease;
-    }
+    button.secondary{ background:#fff; color:var(--db-red); }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+
+    /* ======= STATUS & PROGRESS ======= */
+    .status{ margin-top:18px; min-height:24px; font-size:15px; color:#444; }
+    .progress{ width:100%; height:8px; background:var(--grey-2); border-radius:999px; overflow:hidden; margin-top:10px; display:none; }
+    .progress>div{ height:100%; width:0%; background:var(--db-red); transition:width .3s ease; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>DB Produktdaten – Excel verarbeiten</h1>
+    <h1>Siemens Produktdaten Vergleich</h1>
+    <div class="divider"></div>
 
-    <label id="dz" class="dropzone">
-      <input id="fileInput" type="file" accept=".xlsx,.xls" />
-      <div id="dzText"><strong>Bitte Excel-Datei hochladen</strong><br/>Oder hier ablegen</div>
-      <div class="hint">Header in Zeile 3, Daten ab Zeile 4. A2V in Spalte Z.</div>
-    </label>
+    <!-- Drop‑Zone  -->
+    <div id="dropzone" class="dropzone">
+      <p id="dzText"><strong>Datei hier ablegen</strong><br>oder klicken zum Auswählen</p>
+      <p class="hint">Header = Zeile 3 · Daten ab Zeile 4 · A2V in Spalte Z</p>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" hidden />
 
+    <!-- Aktionen  -->
     <div class="actions">
       <button id="processBtn" disabled>Verarbeiten</button>
       <button id="downloadBtn" class="secondary" disabled>Herunterladen</button>
@@ -117,79 +99,85 @@
   </div>
 
   <script>
-    const dz = document.getElementById('dz');
-    const fileInput = document.getElementById('fileInput');
+    /* ==================== VARIABLEN ==================== */
+    const dropzone   = document.getElementById('dropzone');
+    const dzText     = document.getElementById('dzText');
+    const fileInput  = document.getElementById('fileInput');
     const processBtn = document.getElementById('processBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const statusEl = document.getElementById('status');
+    const downloadBtn= document.getElementById('downloadBtn');
+    const statusEl   = document.getElementById('status');
     const progressEl = document.getElementById('progress');
-    const bar = progressEl.firstElementChild;
+    const bar        = progressEl.firstElementChild;
 
-    let selectedFile = null;
-    let processedBlob = null;
+    let selectedFile = null,
+        processedBlob = null;
 
-    function setStatus(msg) { statusEl.textContent = msg || ''; }
-    function setProgress(pct) {
-      progressEl.style.display = 'block';
-      bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
-    }
+    /* ==================== DROP‑ZONE ==================== */
+    dropzone.addEventListener('click', () => fileInput.click());
 
-    // Dropzone behaviour
-    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('active'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('active'));
-    dz.addEventListener('drop', (e) => {
-      e.preventDefault(); dz.classList.remove('active');
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
       if (e.dataTransfer.files?.length) handleFile(e.dataTransfer.files[0]);
     });
-    dz.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
+
+    fileInput.addEventListener('change', e => {
       if (e.target.files?.length) handleFile(e.target.files[0]);
     });
 
-    function handleFile(file) {
-      if (!/\.(xlsx|xls)$/i.test(file.name)) {
-        setStatus('Nur .xlsx/.xls werden unterstützt.');
+    function handleFile(file){
+      if(!/\.(xlsx|xls)$/i.test(file.name)){
+        statusEl.textContent='Bitte nur .xlsx oder .xls!';
         return;
       }
-      selectedFile = file;
-      document.getElementById('dzText').innerHTML = '<strong>' + file.name + '</strong>';
-      processBtn.disabled = false;
-      setStatus('Datei bereit. Klicke auf „Verarbeiten“.');
+      selectedFile=file;
+      dzText.innerHTML='<strong>'+file.name+'</strong>';
+      processBtn.disabled=false;
+      statusEl.textContent='Datei bereit – „Verarbeiten“ klicken.';
     }
 
-    processBtn.addEventListener('click', async () => {
-      if (!selectedFile) return;
+    /* ==================== VERARBEITEN ==================== */
+    processBtn.addEventListener('click', async ()=>{
+      if(!selectedFile) return;
       processedBlob = null;
-      downloadBtn.disabled = true;
-      setStatus('Verarbeitung gestartet …');
-      setProgress(5);
+      downloadBtn.disabled=true;
+      statusEl.textContent='Verarbeitung läuft …';
+      bar.style.width='0%';
+      progressEl.style.display='block';
 
-      try {
-        const form = new FormData();
+      try{
+        const form=new FormData();
         form.append('file', selectedFile);
-        const resp = await fetch('/api/process-excel', { method: 'POST', body: form });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const buf = await resp.arrayBuffer();
-        processedBlob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        setProgress(100);
-        setStatus('Fertig. Du kannst die Datei jetzt herunterladen.');
-        downloadBtn.disabled = false;
-      } catch (e) {
-        setStatus('Fehler: ' + e.message);
-      } finally {
-        setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 1200);
+        const resp=await fetch('/api/process-excel', { method:'POST', body:form });
+        if(!resp.ok) throw new Error('HTTP '+resp.status);
+
+        processedBlob = new Blob([await resp.arrayBuffer()], {
+          type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        bar.style.width='100%';
+        statusEl.textContent='Fertig – jetzt herunterladen.';
+        downloadBtn.disabled=false;
+      }catch(err){
+        statusEl.textContent='Fehler: '+err.message;
+      }finally{
+        setTimeout(()=>progressEl.style.display='none', 1200);
       }
     });
 
+    /* ==================== DOWNLOAD ==================== */
     downloadBtn.addEventListener('click', () => {
-      if (!processedBlob) return;
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(processedBlob);
-      a.download = 'DB_Produktvergleich_verarbeitet.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(a.href);
-      a.remove();
+      if(!processedBlob) return;
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(processedBlob);
+      a.download='DB_Produktvergleich_verarbeitet.xlsx';
+      a.style.display='none';
+      document.body.append(a); a.click();
+      URL.revokeObjectURL(a.href); a.remove();
     });
   </script>
 </body>
